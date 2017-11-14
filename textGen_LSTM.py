@@ -10,6 +10,11 @@ import codecs
 
 # Parsing arguments for RNN definition
 argumentParser = argparse.ArgumentParser()
+argumentParser.add_argument('-api_key')
+argumentParser.add_argument('-api_secret')
+argumentParser.add_argument('-access_token')
+argumentParser.add_argument('-access_token_secret')
+argumentParser.add_argument('-twitter_user_id', default=713035525)
 argumentParser.add_argument('-file', default='./tweets.txt')
 argumentParser.add_argument('-batch_size', type=int, default=50)
 argumentParser.add_argument('-layer_num', type=int, default=3)
@@ -29,6 +34,12 @@ SEQ_LENGTH = args['seq_length']
 WEIGHTS = args['weights']
 NUM_EPOCHS = args['num_epoch']
 
+API_KEY = args['api_key']
+API_SECRET = args['api_secret']
+ACCESS_TOKEN = args['access_token']
+ACCESS_TOKEN_SECRET = args['access_token_secret']
+UID = args['twitter_user_id']
+
 GENERATE_LENGTH = args['generate_length']
 LAYER_NUM = args['layer_num']
 
@@ -39,7 +50,7 @@ sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())
 
 # Getting the Tweets from a user
 print('\n\nGetting the tweets:\n')
-get_tweets(file=FILE)
+get_tweets(API_KEY, API_SECRET, ACCESS_TOKEN, ACCESS_TOKEN_SECRET, uid=UID, file=FILE)
 
 # Creating training data
 X, y, VOCAB_SIZE, index_to_char = prepare_data(FILE, SEQ_LENGTH, log)

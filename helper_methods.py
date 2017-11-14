@@ -52,9 +52,9 @@ def generate_text(model, length, vocab_size, index_to_char, log):
     return ''.join(y_char)
 
 
-def get_tweets(uid=713035525, file='tweets.txt'):
-    auth = tweepy.OAuthHandler('Sa9K98ptakr1H4KBsJEVxMrYI', 'Wls5SV7jl49F99fIy3OpgQCucJDAwYrQBZ0r7JRXDQLe2VTzvP')
-    auth.set_access_token('899978729396547590-prRio0cVA3dbAEZBZR16yJJAfTnWuMN', 'sSEZyg005EhoHd81OkE61QfwIv1bWi33PFQrCBmDkvU9n')
+def get_tweets(api_key, api_secret, access_token, access_token_secret, uid, file='tweets.txt'):
+    auth = tweepy.OAuthHandler(api_key, api_secret)
+    auth.set_access_token(access_token, access_token_secret)
     api = tweepy.API(auth)
     i = 0
 
