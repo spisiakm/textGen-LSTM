@@ -3,7 +3,7 @@ from keras.models import Sequential
 from keras.layers.core import Dense, Activation
 from keras.layers.recurrent import LSTM
 from keras.layers.wrappers import TimeDistributed
-from helper_methods import *
+from textGenUtils import *
 import argparse
 import sys
 import codecs
@@ -27,6 +27,12 @@ argumentParser.add_argument('-mode', default='train')
 argumentParser.add_argument('-weights', default='')
 args = vars(argumentParser.parse_args())
 
+if args['-help']:
+    print('Welcome to the Tweet generating application using Long Short-term Memory - Recurrent Neural Network!\n'
+          'Usage: python -api_key=yourApiKey -api_secret=yourApiSecret -access_token=yourAccessToken'
+          '-access_token_secret=yourAccessTokenSecret [-twitter_user_id=twitterUID] [-file=pathToFile]')
+    exit()
+
 FILE = args['file']
 BATCH_SIZE = args['batch_size']
 HIDDEN_DIM = args['hidden_dim']
@@ -43,9 +49,12 @@ UID = args['twitter_user_id']
 GENERATE_LENGTH = args['generate_length']
 LAYER_NUM = args['layer_num']
 
+# Name of the file that will contain the generated tweets.
+# The tweets are generated for each epoch, to see the improvements over each iteration
 fileName = 'generated_text_withHiddenDim{}_and_{}layers.txt'.format(HIDDEN_DIM, LAYER_NUM)
 log = open(fileName, 'w', 1, "utf-8")
 
+# Setting an encoding for stdout for cross-platform compatibility
 sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())
 
 # Getting the Tweets from a user

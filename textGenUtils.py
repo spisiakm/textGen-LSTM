@@ -3,9 +3,10 @@ import numpy as np
 import tweepy
 
 
-# prepare data
+# Prepare the data. The characters are read from the *file* by *seq_length* characters and then an information about
+# the processed data is written to log file as well as to standard output
 def prepare_data(file, seq_length, log):
-    # all_chars contains all the examples (characters), unique_chars acts as a features holder
+    # all_chars variable contains all the examples (characters), unique_chars acts as a features holder for our RNN
     all_chars = open(file, 'r', encoding='UTF-8').read()  # open file and read contents into 'all_chars' array, where each element is 1 character
     unique_chars = list(set(all_chars))  # same as 'all_chars', but contains only unique chars -- those repeating in 'all_chars' are discarded
     vocab_size = len(unique_chars)  # size of our vocabulary - unique chars
@@ -59,8 +60,8 @@ def get_tweets(api_key, api_secret, access_token, access_token_secret, uid, file
     i = 0
 
     try:
-        tweets_file = open(file, 'x', 1, "utf-8")
         tweets = tweepy.Cursor(api.user_timeline, user_id=uid, tweet_mode='extended').items()
+        tweets_file = open(file, 'x', 1, "utf-8")
         for status in tweets:
             tweets_file.write(status._json['full_text'] + '\n')
             i += 1
