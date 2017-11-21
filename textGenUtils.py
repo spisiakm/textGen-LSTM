@@ -8,7 +8,7 @@ import tweepy
 def prepare_data(file, seq_length, log):
     # all_chars variable contains all the examples (characters), unique_chars acts as a features holder for our RNN
     all_chars = open(file, 'r', encoding='UTF-8').read()  # open file and read contents into 'all_chars' array, where each element is 1 character
-    unique_chars = list(set(all_chars))  # same as 'all_chars', but contains only unique chars -- those repeating in 'all_chars' are discarded
+    unique_chars = sorted(list(set(all_chars)))  # same as 'all_chars', but contains only unique chars -- those repeating in 'all_chars' are discarded
     vocab_size = len(unique_chars)  # size of our vocabulary - unique chars
 
     print('Data length: {} characters'.format(len(all_chars)))

@@ -16,9 +16,9 @@ argumentParser.add_argument('-access_token')
 argumentParser.add_argument('-access_token_secret')
 argumentParser.add_argument('-twitter_user_id', default=713035525)
 argumentParser.add_argument('-file', default='./tweets.txt')
-argumentParser.add_argument('-batch_size', type=int, default=50)
+argumentParser.add_argument('-batch_size', type=int, default=20)
 argumentParser.add_argument('-layer_num', type=int, default=3)
-argumentParser.add_argument('-seq_length', type=int, default=50)
+argumentParser.add_argument('-seq_length', type=int, default=20)
 argumentParser.add_argument('-hidden_dim', type=int, default=1024)
 argumentParser.add_argument('-generate_length', type=int, default=250)
 argumentParser.add_argument('-nb_epoch', type=int, default=20)  # TODO rewrite this shit
@@ -27,11 +27,13 @@ argumentParser.add_argument('-mode', default='train')
 argumentParser.add_argument('-weights', default='')
 args = vars(argumentParser.parse_args())
 
-if args['-help']:
-    print('Welcome to the Tweet generating application using Long Short-term Memory - Recurrent Neural Network!\n'
-          'Usage: python -api_key=yourApiKey -api_secret=yourApiSecret -access_token=yourAccessToken'
-          '-access_token_secret=yourAccessTokenSecret [-twitter_user_id=twitterUID] [-file=pathToFile]')
-    exit()
+# if args['-help']:
+#     print('Welcome to the Tweet generating application using Long Short-term Memory - Recurrent Neural Network!\n'
+#           'Usage: python -api_key=yourApiKey -api_secret=yourApiSecret -access_token=yourAccessToken'
+#           '-access_token_secret=yourAccessTokenSecret [-twitter_user_id=twitterUID] [-file=pathToFile]')
+#     exit()
+
+# -twitter_user_id=813286
 
 FILE = args['file']
 BATCH_SIZE = args['batch_size']
@@ -66,9 +68,9 @@ X, y, VOCAB_SIZE, index_to_char = prepare_data(FILE, SEQ_LENGTH, log)
 
 # Creating the Network
 model = Sequential()
-model.add(LSTM(HIDDEN_DIM, input_shape=(None, VOCAB_SIZE), return_sequences=True))
+model.add(LSTM(HIDDEN_DIM, input_shape=(None, VOCAB_SIZE), return_sequences=True, dropout=0.2))
 for i in range(LAYER_NUM - 1):
-    model.add(LSTM(HIDDEN_DIM, return_sequences=True))
+    model.add(LSTM(HIDDEN_DIM, return_sequences=True, dropout=0.2))
 model.add(TimeDistributed(Dense(VOCAB_SIZE)))
 model.add(Activation('softmax'))
 model.compile(loss="categorical_crossentropy", optimizer="rmsprop")
