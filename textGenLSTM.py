@@ -1,8 +1,12 @@
 from __future__ import print_function
 from keras.models import Sequential
+from keras.optimizers import RMSprop
 from keras.layers.core import Dense, Activation
 from keras.layers.recurrent import LSTM
 from keras.layers.wrappers import TimeDistributed
+from keras.callbacks import ModelCheckpoint
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import pairwise_distances
 from textGenUtils import *
 import argparse
 import sys
@@ -14,94 +18,74 @@ argumentParser.add_argument('-api_key')
 argumentParser.add_argument('-api_secret')
 argumentParser.add_argument('-access_token')
 argumentParser.add_argument('-access_token_secret')
-argumentParser.add_argument('-twitter_user_id', default=713035525)
-argumentParser.add_argument('-file', default='./tweets.txt')
-argumentParser.add_argument('-batch_size', type=int, default=20)
-argumentParser.add_argument('-layer_num', type=int, default=3)
-argumentParser.add_argument('-seq_length', type=int, default=20)
-argumentParser.add_argument('-hidden_dim', type=int, default=1024)
-argumentParser.add_argument('-generate_length', type=int, default=250)
-argumentParser.add_argument('-nb_epoch', type=int, default=20)  # TODO rewrite this shit
-argumentParser.add_argument('-num_epoch', type=int, default=100)
+argumentParser.add_argument('-twitter_user', default='GoGoManTweet')
+argumentParser.add_argument('-file', default='tweets.npy')
 argumentParser.add_argument('-mode', default='train')
 argumentParser.add_argument('-weights', default='')
 args = vars(argumentParser.parse_args())
-
-# if args['-help']:
-#     print('Welcome to the Tweet generating application using Long Short-term Memory - Recurrent Neural Network!\n'
-#           'Usage: python -api_key=yourApiKey -api_secret=yourApiSecret -access_token=yourAccessToken'
-#           '-access_token_secret=yourAccessTokenSecret [-twitter_user_id=twitterUID] [-file=pathToFile]')
-#     exit()
-
-# -twitter_user_id=813286
-
-FILE = args['file']
-BATCH_SIZE = args['batch_size']
-HIDDEN_DIM = args['hidden_dim']
-SEQ_LENGTH = args['seq_length']
-WEIGHTS = args['weights']
-NUM_EPOCHS = args['num_epoch']
 
 API_KEY = args['api_key']
 API_SECRET = args['api_secret']
 ACCESS_TOKEN = args['access_token']
 ACCESS_TOKEN_SECRET = args['access_token_secret']
-UID = args['twitter_user_id']
+TWITTER_USER = args['twitter_user']
+TWEETS_FILE = args['file']
+WEIGHTS = args['weights']
 
-GENERATE_LENGTH = args['generate_length']
-LAYER_NUM = args['layer_num']
+batchSize = 128
+layers = 2
+maxTwitterLength = 120
+layerDimension = 256
+epochsToTrain = 20
+sequenceLength = 40
+sequenceStep = 3
+dropout = 0.2
+learningRate = 0.01
+numOfTweets = 3
 
 # Name of the file that will contain the generated tweets.
-# The tweets are generated for each epoch, to see the improvements over each iteration
-fileName = 'generated_text_withHiddenDim{}_and_{}layers.txt'.format(HIDDEN_DIM, LAYER_NUM)
-log = open(fileName, 'w', 1, "utf-8")
+generated_tweets_file = 'generated_tweets_author-{}_dim-{}_layers-{}_epochs-{}.txt'.format(TWITTER_USER, layerDimension, layers, epochsToTrain)
+log = open(generated_tweets_file, 'w', 1, "utf-8")
 
 # Setting an encoding for stdout for cross-platform compatibility
 sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())
 
-# Getting the Tweets from a user
+# Getting the tweets for specified user
 print('\n\nGetting the tweets:\n')
-get_tweets(API_KEY, API_SECRET, ACCESS_TOKEN, ACCESS_TOKEN_SECRET, uid=UID, file=FILE)
+save_tweets(API_KEY, API_SECRET, ACCESS_TOKEN, ACCESS_TOKEN_SECRET, user_name=TWITTER_USER, file=TWEETS_FILE)
 
 # Creating training data
-X, y, VOCAB_SIZE, index_to_char = prepare_data(FILE, SEQ_LENGTH, log)
+print('\n\nPreparing the training data:\n')
+X, y, vocab_size, index_to_char, sequences = prepare_data(TWEETS_FILE, sequenceLength, log)
 
 # Creating the Network
+print('\n\nBuilding the learning model:\n')
 model = Sequential()
-model.add(LSTM(HIDDEN_DIM, input_shape=(None, VOCAB_SIZE), return_sequences=True, dropout=0.2))
-for i in range(LAYER_NUM - 1):
-    model.add(LSTM(HIDDEN_DIM, return_sequences=True, dropout=0.2))
-model.add(TimeDistributed(Dense(VOCAB_SIZE)))
+model.add(LSTM(layerDimension, input_shape=(None, vocab_size), return_sequences=True, dropout=0.2))
+for i in range(layers - 1):
+    model.add(LSTM(layerDimension, return_sequences=True, dropout=0.2))
+model.add(TimeDistributed(Dense(vocab_size)))
 model.add(Activation('softmax'))
-model.compile(loss="categorical_crossentropy", optimizer="rmsprop")
-
-# Generate some sample before training to know how bad it is!
-generate_text(model, args['generate_length'], VOCAB_SIZE, index_to_char, log)
-
-if not WEIGHTS == '':
-    model.load_weights(WEIGHTS)
-    nb_epoch = int(WEIGHTS[WEIGHTS.rfind('_') + 1:WEIGHTS.find('.')])
-else:
-    nb_epoch = 0
+model.compile(loss="categorical_crossentropy", optimizer=RMSprop(lr=0.01))
+print('Model Summary:')
+model.summary()
 
 # Training if there is no trained weights specified
-if args['mode'] == 'train' or WEIGHTS == '':
-    i = 0
-    while i < NUM_EPOCHS:
-        print('\n\nEpoch: {}\n'.format(nb_epoch))
-        log.write('\n\nEpoch: {}\n'.format(nb_epoch))
-        model.fit(X, y, batch_size=BATCH_SIZE, verbose=1, epochs=1)
-        nb_epoch += 1
-        i += 1
-        generate_text(model, GENERATE_LENGTH, VOCAB_SIZE, index_to_char, log)
-        if nb_epoch % 10 == 0:
-            model.save_weights('checkpoint_layer_{}_hidden_{}_epoch_{}.hdf5'.format(LAYER_NUM, HIDDEN_DIM, nb_epoch))
+if WEIGHTS == '':
+    saved_weights = 'checkpoint_layers{}_dim{}'.format(layers, layerDimension)
+    checkpoint = ModelCheckpoint(filepath=saved_weights + '_epoch{epoch:02d}.hdf5',
+                                 monitor='loss', verbose=1, save_best_only=True, mode='min', period=5)
+    model.fit(X, y, batch_size=batchSize, verbose=1, epochs=epochsToTrain, callbacks=[checkpoint])
 
-# Else, loading the trained weights and performing generation only
-elif WEIGHTS != '':
-    # Loading the trained weights
-    model.load_weights(WEIGHTS)
-    generate_text(model, GENERATE_LENGTH, VOCAB_SIZE, index_to_char, log)
-    print('\n\n')
+# Else, loading the trained weights
 else:
-    print('\n\nNothing to do!')
+    model.load_weights(WEIGHTS)
+
+# Generating the tweets
+tweets = generate_text(model, maxTwitterLength, vocab_size, index_to_char, log, numOfTweets)
+print('\n\n')
+
+vectorizer = TfidfVectorizer()
+tfidf = vectorizer.fit_transform(sequences)
+x_val = vectorizer.transform(tweets)
+print(pairwise_distances(x_val, Y=tfidf, metric='cosine').min(axis=1).mean())
