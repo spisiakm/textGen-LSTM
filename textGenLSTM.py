@@ -44,15 +44,16 @@ learningRate = 0.01
 numOfTweets = 3
 
 # Name of the file that will contain the generated tweets.
-generated_tweets_file = 'generated_tweets_author-{}_dim-{}_layers-{}_epochs-{}.txt'.format(TWITTER_USER, layerDimension, layers, epochsToTrain)
+generated_tweets_file = 'generated_tweets_dim-{}_layers-{}_epochs-{}.txt'.format(layerDimension, layers, epochsToTrain)
 log = open(generated_tweets_file, 'w', 1, "utf-8")
 
 # Setting an encoding for stdout for cross-platform compatibility
 sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())
 
-# Getting the tweets for specified user
-print('\n\nGetting the tweets:\n')
-save_tweets(API_KEY, API_SECRET, ACCESS_TOKEN, ACCESS_TOKEN_SECRET, user_name=TWITTER_USER, file=TWEETS_FILE)
+if TWEETS_FILE == 'tweets.npy':
+    # Getting the tweets for specified user
+    print('\n\nGetting the tweets:\n')
+    save_tweets(API_KEY, API_SECRET, ACCESS_TOKEN, ACCESS_TOKEN_SECRET, user_name=TWITTER_USER, file=TWEETS_FILE)
 
 # Creating training data
 print('\n\nPreparing the training data:\n')
@@ -84,8 +85,10 @@ else:
 # Generating the tweets
 tweets = generate_text(model, maxTwitterLength, vocab_size, index_to_char, log, numOfTweets)
 print('\n\n')
+log.write('\n\n')
 
 vectorizer = TfidfVectorizer()
 tfidf = vectorizer.fit_transform(sequences)
 x_val = vectorizer.transform(tweets)
 print(pairwise_distances(x_val, Y=tfidf, metric='cosine').min(axis=1).mean())
+log.write('{}'.format(pairwise_distances(x_val, Y=tfidf, metric='cosine').min(axis=1).mean()))

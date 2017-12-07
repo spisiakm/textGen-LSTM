@@ -19,7 +19,7 @@ def prepare_data(file, seq_length, log, step_size=3):
     print('Vocabulary size: {} characters'.format(vocab_size))
     log.write('Vocabulary size: {} characters\n\n'.format(vocab_size))
 
-    return initialize_arrays(all_chars=all_chars, unique_chars=unique_chars, vocab_size=vocab_size, seq_length=seq_length, step_size=step_size)
+    return initialize_arrays(all_chars, unique_chars, vocab_size, seq_length, step_size, log)
 
 
 # Remove any "non-regular" chars, like emojis, wild spaces, URLs and so on
@@ -44,53 +44,41 @@ def regularize_tweets(file):
     return tweets
 
 
-def initialize_arrays(all_chars, unique_chars, vocab_size, seq_length, step_size):
+def initialize_arrays(all_chars, unique_chars, vocab_size, seq_length, step_size, log):
     index_to_char = {index: char for index, char in enumerate(unique_chars)}
     char_to_index = {char: index for index, char in enumerate(unique_chars)}
 
-    num_of_sequences = (len(all_chars) - seq_length - 1) // step_size + 1
-    remaining_chars = (len(all_chars) - seq_length - 1) % step_size
-
-    x = np.zeros((num_of_sequences + (remaining_chars != 0), seq_length, vocab_size))
-    y = np.zeros((num_of_sequences + (remaining_chars != 0), seq_length, vocab_size))
+    # divide all tweets into sequences, each starting from length of step_size from previous one
+    # next_chars are characters that follow in each sequence
     sequences = []
     next_chars = []
-
-    for i in range(0, num_of_sequences + (remaining_chars != 0)):
-        if i == num_of_sequences:
-            x_sequence = all_chars[(i - 1) * step_size + remaining_chars:((i - 1) * step_size) + remaining_chars + seq_length]
-        else:
-            x_sequence = all_chars[i * step_size:(i * step_size) + seq_length]
-        sequences.append(x_sequence)
-        x_sequence_index = [char_to_index[value] for value in x_sequence]
-        input_sequence = np.zeros((seq_length, vocab_size))
-        for j in range(seq_length):
-            input_sequence[j][x_sequence_index[j]] = 1.
-            x[i] = input_sequence
-
-        if i == num_of_sequences:
-            y_sequence = all_chars[((i - 1) * step_size) + remaining_chars + 1:((i - 1) * step_size) + remaining_chars + seq_length + 1]
-        else:
-            y_sequence = all_chars[(i * step_size) + 1:(i * step_size) + seq_length + 1]
-        next_chars.append(y_sequence)
-        y_sequence_index = [char_to_index[value] for value in y_sequence]
-        target_sequence = np.zeros((seq_length, vocab_size))
-        for j in range(seq_length):
-            target_sequence[j][y_sequence_index[j]] = 1.
-            y[i] = target_sequence
-
+    for i in range(0, len(all_chars) - seq_length, step_size):
+        sequences.append(all_chars[i:i + seq_length])
+        next_chars.append(all_chars[i + 1:i + seq_length + 1])
     sequences = np.array(sequences)
+    next_chars = np.array(next_chars)
+
+    # one-hot encode - binary values, true for index where a current char is specified
+    x = np.zeros((len(sequences), seq_length, vocab_size), dtype=np.bool)
+    y = np.zeros((len(sequences), seq_length, vocab_size), dtype=np.bool)
+    for i, sequence in enumerate(sequences):
+        for j, char in enumerate(sequence):
+            x[i, j, char_to_index[char]] = 1
+            y[i, j, char_to_index[next_chars[i][j]]] = 1
+
     print('Number of sequences: ', len(sequences))
+    log.write('Number of sequences: {}'.format(len(sequences)))
     print('Sequence length: ', seq_length)
+    log.write('Sequence length: {}'.format(seq_length))
     return x, y, vocab_size, index_to_char, sequences
 
 
-def generate_text(model, length, vocab_size, index_to_char, log, num_of_tweets=3):
+def generate_text(model, length, vocab_size, index_to_char, log, num_of_tweets=3, temperature=0.2):
     tweets = []
     ending_pattern = re.compile(r"[.!?]")
     for tweet_no in range(num_of_tweets):
-        print('\n\nTweet no. {}\n'.format(tweet_no))
-        log.write('\n\nTweet no. {}\n'.format(tweet_no))
+        print('\n\nTweet no. {} and temperature of {}\n'.format(tweet_no, temperature))
+        log.write('\n\nTweet no. and temperature of {}\n'.format(tweet_no, temperature))
         # starting with random character
         index = [np.random.randint(vocab_size)]
         print(index_to_char[index[-1]], end="")
@@ -100,9 +88,10 @@ def generate_text(model, length, vocab_size, index_to_char, log, num_of_tweets=3
         x = np.zeros((1, length, vocab_size))
         for i in range(length):
             # appending the last predicted character to sequence
-            x[0, i, :][index[-1]] = 1
-            index = np.argmax(model.predict(x[:, :i + 1, :])[0], 1)
-            predicted_char = index_to_char[index[-1]]
+            x[0, i, :][index] = 1
+            predictions = model.predict(x[:, :i + 1, :])[0][-1]
+            index = sample(predictions, temperature)
+            predicted_char = index_to_char[index]
             print(predicted_char, end="")
             log.write(predicted_char)
             y_char += predicted_char
@@ -135,3 +124,15 @@ def save_tweets(api_key, api_secret, access_token, access_token_secret, user_nam
     np.save(file=file, arr=tweets_array)
     print('{} tweets have been saved to a file {}.'.format(i, file))
     print('You can see received tweets in file received_tweets.txt.\n')
+
+
+# from https://github.com/fchollet/keras/blob/master/examples/lstm_text_generation.py
+# it is possible to just define temperature in layers by providing dropout param
+def sample(preds, temperature):
+    # helper function to sample an index from a probability array
+    preds = np.asarray(preds).astype('float64')
+    preds = np.log(preds) / temperature
+    exp_preds = np.exp(preds)
+    preds = exp_preds / np.sum(exp_preds)
+    probas = np.random.multinomial(1, preds, 1)
+    return np.argmax(probas)
