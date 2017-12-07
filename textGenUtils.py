@@ -73,7 +73,7 @@ def initialize_arrays(all_chars, unique_chars, vocab_size, seq_length, step_size
     return x, y, vocab_size, index_to_char, sequences
 
 
-def generate_text(model, length, vocab_size, index_to_char, log, num_of_tweets=3, temperature=0.2):
+def produce_tweets(model, length, vocab_size, index_to_char, log, num_of_tweets=3, temperature=0.2):
     tweets = []
     ending_pattern = re.compile(r"[.!?]")
     for tweet_no in range(num_of_tweets):

@@ -83,7 +83,7 @@ else:
     model.load_weights(WEIGHTS)
 
 # Generating the tweets
-tweets = generate_text(model, maxTwitterLength, vocab_size, index_to_char, log, numOfTweets)
+tweets = produce_tweets(model, maxTwitterLength, vocab_size, index_to_char, log, numOfTweets)
 print('\n\n')
 log.write('\n\n')
 
