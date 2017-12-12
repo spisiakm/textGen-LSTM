@@ -1,8 +1,8 @@
 from __future__ import print_function
 from keras.models import Sequential
-from keras.optimizers import RMSprop
+from keras.optimizers import RMSprop, Adam
 from keras.layers.core import Dense, Activation
-from keras.layers.recurrent import LSTM
+from keras.layers.recurrent import LSTM, GRU
 from keras.layers.wrappers import TimeDistributed
 from keras.callbacks import ModelCheckpoint
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -35,8 +35,8 @@ WEIGHTS = args['weights']
 batchSize = 128
 layers = 2
 maxTwitterLength = 120
-layerDimension = 256
-epochsToTrain = 20
+layerDimension = 128
+epochsToTrain = 60
 sequenceLength = 40
 sequenceStep = 3
 dropout = 0.2
@@ -57,17 +57,22 @@ if TWEETS_FILE == 'tweets.npy':
 
 # Creating training data
 print('\n\nPreparing the training data:\n')
-X, y, vocab_size, index_to_char, sequences = prepare_data(TWEETS_FILE, sequenceLength, log)
+X, y, vocab_size, index_to_char, sequences = prepare_data(TWEETS_FILE, sequenceLength, log, step_size=sequenceStep)
 
 # Creating the Network
 print('\n\nBuilding the learning model:\n')
 model = Sequential()
-model.add(LSTM(layerDimension, input_shape=(None, vocab_size), return_sequences=True, dropout=0.2))
-for i in range(layers - 1):
-    model.add(LSTM(layerDimension, return_sequences=True, dropout=0.2))
-model.add(TimeDistributed(Dense(vocab_size)))
-model.add(Activation('softmax'))
-model.compile(loss="categorical_crossentropy", optimizer=RMSprop(lr=0.01))
+if layers == 1:
+    model.add(LSTM(layerDimension, input_shape=(None, vocab_size), return_sequences=False, dropout=dropout))
+else:
+    model.add(LSTM(layerDimension, input_shape=(None, vocab_size), return_sequences=True, dropout=dropout))
+    for i in range(layers - 1):
+        if i == layers - 2:
+            model.add(LSTM(layerDimension, return_sequences=False, dropout=dropout))
+        else:
+            model.add(LSTM(layerDimension, return_sequences=True, dropout=dropout))
+model.add(Dense(vocab_size, activation='softmax'))
+model.compile(loss="categorical_crossentropy", optimizer=RMSprop(lr=learningRate))
 print('Model Summary:')
 model.summary()
 
@@ -84,6 +89,8 @@ else:
 
 # Generating the tweets
 tweets = produce_tweets(model, maxTwitterLength, vocab_size, index_to_char, log, numOfTweets)
+for temp in [0.5, 1.0, 1.2]:
+    produce_tweets(model, maxTwitterLength, vocab_size, index_to_char, log, numOfTweets, temperature=temp)
 print('\n\n')
 log.write('\n\n')
 

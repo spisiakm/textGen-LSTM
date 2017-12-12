@@ -54,20 +54,20 @@ def initialize_arrays(all_chars, unique_chars, vocab_size, seq_length, step_size
     next_chars = []
     for i in range(0, len(all_chars) - seq_length, step_size):
         sequences.append(all_chars[i:i + seq_length])
-        next_chars.append(all_chars[i + 1:i + seq_length + 1])
+        next_chars.append(all_chars[i + seq_length])
     sequences = np.array(sequences)
     next_chars = np.array(next_chars)
 
     # one-hot encode - binary values, true for index where a current char is specified
     x = np.zeros((len(sequences), seq_length, vocab_size), dtype=np.bool)
-    y = np.zeros((len(sequences), seq_length, vocab_size), dtype=np.bool)
+    y = np.zeros((len(sequences), vocab_size), dtype=np.bool)
     for i, sequence in enumerate(sequences):
         for j, char in enumerate(sequence):
             x[i, j, char_to_index[char]] = 1
-            y[i, j, char_to_index[next_chars[i][j]]] = 1
+        y[i, char_to_index[next_chars[i]]] = 1
 
     print('Number of sequences: ', len(sequences))
-    log.write('Number of sequences: {}'.format(len(sequences)))
+    log.write('Number of sequences: {}\n'.format(len(sequences)))
     print('Sequence length: ', seq_length)
     log.write('Sequence length: {}'.format(seq_length))
     return x, y, vocab_size, index_to_char, sequences
@@ -89,7 +89,7 @@ def produce_tweets(model, length, vocab_size, index_to_char, log, num_of_tweets=
         for i in range(length):
             # appending the last predicted character to sequence
             x[0, i, :][index] = 1
-            predictions = model.predict(x[:, :i + 1, :])[0][-1]
+            predictions = model.predict(x[:, :i + 1, :])[0]
             index = sample(predictions, temperature)
             predicted_char = index_to_char[index]
             print(predicted_char, end="")
@@ -127,7 +127,6 @@ def save_tweets(api_key, api_secret, access_token, access_token_secret, user_nam
 
 
 # from https://github.com/fchollet/keras/blob/master/examples/lstm_text_generation.py
-# it is possible to just define temperature in layers by providing dropout param
 def sample(preds, temperature):
     # helper function to sample an index from a probability array
     preds = np.asarray(preds).astype('float64')
