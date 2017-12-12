@@ -78,7 +78,7 @@ def produce_tweets(model, length, vocab_size, index_to_char, log, num_of_tweets=
     ending_pattern = re.compile(r"[.!?]")
     for tweet_no in range(num_of_tweets):
         print('\n\nTweet no. {} and temperature of {}\n'.format(tweet_no, temperature))
-        log.write('\n\nTweet no. and temperature of {}\n'.format(tweet_no, temperature))
+        log.write('\n\nTweet no. {} and temperature of {}\n'.format(tweet_no, temperature))
         # starting with random character
         index = [np.random.randint(vocab_size)]
         print(index_to_char[index[-1]], end="")

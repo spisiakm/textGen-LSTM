@@ -36,7 +36,7 @@ batchSize = 128
 layers = 2
 maxTwitterLength = 120
 layerDimension = 128
-epochsToTrain = 60
+epochsToTrain = 100
 sequenceLength = 40
 sequenceStep = 3
 dropout = 0.2
@@ -44,7 +44,7 @@ learningRate = 0.01
 numOfTweets = 3
 
 # Name of the file that will contain the generated tweets.
-generated_tweets_file = 'generated_tweets_dim-{}_layers-{}_epochs-{}.txt'.format(layerDimension, layers, epochsToTrain)
+generated_tweets_file = 'generated_tweets_dim-{}_layers-{}_epochs-{}_dropout-{}.txt'.format(layerDimension, layers, epochsToTrain, dropout)
 log = open(generated_tweets_file, 'w', 1, "utf-8")
 
 # Setting an encoding for stdout for cross-platform compatibility
