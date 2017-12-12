@@ -52,9 +52,9 @@ def initialize_arrays(all_chars, unique_chars, vocab_size, seq_length, step_size
     # next_chars are characters that follow in each sequence
     sequences = []
     next_chars = []
-    for i in range(0, len(all_chars) - seq_length, step_size):
+    for i in range(0, len(all_chars) - seq_length*2, step_size):
         sequences.append(all_chars[i:i + seq_length])
-        next_chars.append(all_chars[i + 1:i + seq_length + 1])
+        next_chars.append(all_chars[i + seq_length:i + seq_length*2])
     sequences = np.array(sequences)
     next_chars = np.array(next_chars)
 
@@ -67,7 +67,7 @@ def initialize_arrays(all_chars, unique_chars, vocab_size, seq_length, step_size
             y[i, j, char_to_index[next_chars[i][j]]] = 1
 
     print('Number of sequences: ', len(sequences))
-    log.write('Number of sequences: {}'.format(len(sequences)))
+    log.write('Number of sequences: {}\n'.format(len(sequences)))
     print('Sequence length: ', seq_length)
     log.write('Sequence length: {}'.format(seq_length))
     return x, y, vocab_size, index_to_char, sequences
@@ -127,7 +127,6 @@ def save_tweets(api_key, api_secret, access_token, access_token_secret, user_nam
 
 
 # from https://github.com/fchollet/keras/blob/master/examples/lstm_text_generation.py
-# it is possible to just define temperature in layers by providing dropout param
 def sample(preds, temperature):
     # helper function to sample an index from a probability array
     preds = np.asarray(preds).astype('float64')

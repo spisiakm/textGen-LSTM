@@ -35,7 +35,7 @@ WEIGHTS = args['weights']
 batchSize = 128
 layers = 2
 maxTwitterLength = 120
-layerDimension = 256
+layerDimension = 128
 epochsToTrain = 20
 sequenceLength = 40
 sequenceStep = 3
@@ -57,17 +57,17 @@ if TWEETS_FILE == 'tweets.npy':
 
 # Creating training data
 print('\n\nPreparing the training data:\n')
-X, y, vocab_size, index_to_char, sequences = prepare_data(TWEETS_FILE, sequenceLength, log)
+X, y, vocab_size, index_to_char, sequences = prepare_data(TWEETS_FILE, sequenceLength, log, step_size=sequenceStep)
 
 # Creating the Network
 print('\n\nBuilding the learning model:\n')
 model = Sequential()
-model.add(LSTM(layerDimension, input_shape=(None, vocab_size), return_sequences=True, dropout=0.2))
+model.add(LSTM(layerDimension, input_shape=(None, vocab_size), return_sequences=True, dropout=dropout))
 for i in range(layers - 1):
-    model.add(LSTM(layerDimension, return_sequences=True, dropout=0.2))
+    model.add(LSTM(layerDimension, return_sequences=True, dropout=dropout))
 model.add(TimeDistributed(Dense(vocab_size)))
 model.add(Activation('softmax'))
-model.compile(loss="categorical_crossentropy", optimizer=RMSprop(lr=0.01))
+model.compile(loss="categorical_crossentropy", optimizer=RMSprop(lr=learningRate))
 print('Model Summary:')
 model.summary()
 
