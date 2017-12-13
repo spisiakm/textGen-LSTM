@@ -3,10 +3,7 @@ from keras.models import Sequential
 from keras.optimizers import RMSprop, Adam
 from keras.layers.core import Dense, Activation
 from keras.layers.recurrent import LSTM, GRU
-from keras.layers.wrappers import TimeDistributed
 from keras.callbacks import ModelCheckpoint
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import pairwise_distances
 from textGenUtils import *
 import argparse
 import sys
@@ -89,13 +86,3 @@ else:
 
 # Generating the tweets
 tweets = produce_tweets(model, maxTwitterLength, vocab_size, index_to_char, log, numOfTweets)
-for temp in [0.5, 1.0, 1.2]:
-    produce_tweets(model, maxTwitterLength, vocab_size, index_to_char, log, numOfTweets, temperature=temp)
-print('\n\n')
-log.write('\n\n')
-
-vectorizer = TfidfVectorizer()
-tfidf = vectorizer.fit_transform(sequences)
-x_val = vectorizer.transform(tweets)
-print(pairwise_distances(x_val, Y=tfidf, metric='cosine').min(axis=1).mean())
-log.write('{}'.format(pairwise_distances(x_val, Y=tfidf, metric='cosine').min(axis=1).mean()))
